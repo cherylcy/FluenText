@@ -15,3 +15,7 @@ export function grammarCorrect(text: string): string {
 export function naturalVariants(text: string): string[] {
   return ["Natural sentence 1.", "Natural sentence 2."];
 }
+
+export async function polishDraft(text: string): Promise<string> {
+  return text;
+}

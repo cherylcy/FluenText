@@ -1,5 +1,11 @@
 import { useState, useMemo } from "react";
-import { splitSentences, grammarCorrect, naturalVariants } from "./utils";
+import {
+  splitSentences,
+  grammarCorrect,
+  naturalVariants,
+  polishDraft,
+} from "./utils";
+import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -16,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText } from "lucide-react";
+import { FileText, Wand2, Loader2 } from "lucide-react";
 import "./App.css";
 
 interface Suggestion {
@@ -27,6 +33,9 @@ interface Suggestion {
 function App() {
   const [draft, setDraft] = useState<string>("");
   const [selectedTone, setSelectedTone] = useState<string>("neutral");
+  const [isPolishing, setIsPolishing] = useState<boolean>(false);
+  const [showPolished, setShowPolished] = useState<boolean>(false);
+  const [polishedText, setPolishedText] = useState<string>("");
 
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
 
@@ -37,6 +46,20 @@ function App() {
       return { corrected, variants };
     });
   }, [sentences]);
+
+  function handlePolish() {
+    setIsPolishing(true);
+    polishDraft(draft)
+      .then((s) => {
+        setPolishedText(s);
+        setIsPolishing(false);
+        setShowPolished(true);
+      })
+      .catch((error) => {
+        console.error("Polishing failed:", error);
+        setIsPolishing(false);
+      });
+  }
 
   return (
     <>
@@ -77,7 +100,22 @@ function App() {
                       <SelectItem value="casual">Casual</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button>Generate polished draft</Button>
+                  <Button
+                    onClick={handlePolish}
+                    disabled={!draft.trim() || isPolishing}
+                  >
+                    {isPolishing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spoin" />
+                        Polishing...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Generate polished draft
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -85,20 +123,25 @@ function App() {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={50}>
-          <div className="flex h-full items-center justify-center">
-            <Card className="w-full h-full border-0 rounded-none gap-2 pt-6 pb-0">
+          <div className="flex flex-col h-full items-center justify-center overflow-hidden">
+            <Card
+              className={cn(
+                "w-full border-0 rounded-none gap-2 pt-6 pb-0",
+                showPolished ? "h-1/2" : "h-full"
+              )}
+            >
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <span>Sentence Suggestions</span>
+                <CardTitle className="text-base">
+                  Sentence Suggestions
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ScrollArea>
+              <CardContent className="overflow-hidden">
+                <ScrollArea className="h-full">
                   <div className="space-y-2">
                     {sentences.map((s, idx) => (
                       <div
                         key={idx}
-                        className="border border-slate-100 rounded-2xl p-3 bg-white"
+                        className="border-b border-slate-100 rounded-2xl p-3 bg-white"
                       >
                         <div className="text-sm mb-2">"{s}"</div>
                         <div className="text-sm font-medium mb-1">
@@ -121,6 +164,30 @@ function App() {
                 </ScrollArea>
               </CardContent>
             </Card>
+            {showPolished && (
+              <Card className="w-full h-1/2 border-0 rounded-none gap-1 pt-6 pb-0">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Wand2 className="h-4 w-4" /> Polished Draft
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-full flex flex-col justify-between">
+                  <div className="mb-2 text-xs text-slate-500">
+                    Tone: {selectedTone}
+                  </div>
+                  <div className="grow h-0">
+                    <ScrollArea className="h-full">
+                      <Textarea
+                        value={polishedText}
+                        // value={"I am testing.\n".repeat(100)}
+                        readOnly
+                        className="border-none shadow-none resize-none focus-visible:ring-0"
+                      />
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
