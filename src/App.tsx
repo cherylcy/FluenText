@@ -11,7 +11,13 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardAction,
+} from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Wand2, Loader2 } from "lucide-react";
+import { FileText, Wand2, Loader2, X } from "lucide-react";
 import "./App.css";
 
 interface Suggestion {
@@ -34,7 +40,7 @@ function App() {
   const [draft, setDraft] = useState<string>("");
   const [selectedTone, setSelectedTone] = useState<string>("neutral");
   const [isPolishing, setIsPolishing] = useState<boolean>(false);
-  const [showPolished, setShowPolished] = useState<boolean>(false);
+  const [showPolished, setShowPolished] = useState<boolean>(true);
   const [polishedText, setPolishedText] = useState<string>("");
 
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
@@ -170,6 +176,16 @@ function App() {
                   <CardTitle className="text-base flex items-center gap-2">
                     <Wand2 className="h-4 w-4" /> Polished Draft
                   </CardTitle>
+                  <CardAction>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPolished(false)}
+                      className="h-4 w-4 text-muted-foreground hover:text-foreground hover:bg-transparent"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardAction>
                 </CardHeader>
                 <CardContent className="h-full flex flex-col justify-between">
                   <div className="mb-2 text-xs text-slate-500">
