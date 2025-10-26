@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { splitSentences, grammarCorrect, naturalVariants } from "./utils";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -14,12 +15,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText } from "lucide-react";
 import "./App.css";
 
+interface Suggestion {
+  corrected: string;
+  variants: string[];
+}
+
 function App() {
-  const [draft, setDraft] = useState("");
-  const [selectedTone, setSelectedTone] = useState("neutral");
+  const [draft, setDraft] = useState<string>("");
+  const [selectedTone, setSelectedTone] = useState<string>("neutral");
+
+  const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
+
+  const suggestions: Suggestion[] = useMemo(() => {
+    return sentences.map((s) => {
+      const corrected = grammarCorrect(s);
+      const variants = naturalVariants(s);
+      return { corrected, variants };
+    });
+  }, [sentences]);
+
   return (
     <>
       <ResizablePanelGroup
@@ -31,7 +49,7 @@ function App() {
             <Card className="w-full h-full border-0 rounded-none gap-2 pt-6 pb-0">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <FileText /> Draft Area
+                  <FileText className="w-4 h-4" /> Draft Area
                 </CardTitle>
               </CardHeader>
               <CardContent className="h-full flex flex-col justify-between overflow-hidden p-0">
@@ -68,7 +86,41 @@ function App() {
         <ResizableHandle />
         <ResizablePanel defaultSize={50}>
           <div className="flex h-full items-center justify-center">
-            <span className="font-semibold">Content</span>
+            <Card className="w-full h-full border-0 rounded-none gap-2 pt-6 pb-0">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span>Sentence Suggestions</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea>
+                  <div className="space-y-2">
+                    {sentences.map((s, idx) => (
+                      <div
+                        key={idx}
+                        className="border border-slate-100 rounded-2xl p-3 bg-white"
+                      >
+                        <div className="text-sm mb-2">"{s}"</div>
+                        <div className="text-sm font-medium mb-1">
+                          Grammar corrected
+                        </div>
+                        <div className="text-xs text-slate-600 mb-1">
+                          {suggestions[idx].corrected}
+                        </div>
+                        <div className="text-sm font-medium mb-1">
+                          More natural
+                        </div>
+                        {suggestions[idx].variants.map((v, vi) => (
+                          <div key={vi} className="text-xs text-slate-600 mb-1">
+                            {v}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
