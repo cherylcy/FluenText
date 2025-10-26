@@ -40,7 +40,7 @@ function App() {
   const [draft, setDraft] = useState<string>("");
   const [selectedTone, setSelectedTone] = useState<string>("neutral");
   const [isPolishing, setIsPolishing] = useState<boolean>(false);
-  const [showPolished, setShowPolished] = useState<boolean>(true);
+  const [showPolished, setShowPolished] = useState<boolean>(false);
   const [polishedText, setPolishedText] = useState<string>("");
 
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
@@ -195,7 +195,6 @@ function App() {
                     <ScrollArea className="h-full">
                       <Textarea
                         value={polishedText}
-                        // value={"I am testing.\n".repeat(100)}
                         readOnly
                         className="border-none shadow-none resize-none focus-visible:ring-0"
                       />
