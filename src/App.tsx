@@ -109,7 +109,7 @@ function App() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                 />
-                <div className="flex justify-end gap-2 my-4 mr-2">
+                <div className="flex justify-end gap-2 my-4 mr-2 lg:mr-4">
                   <Select
                     value={selectedTone}
                     onValueChange={(value) => {
