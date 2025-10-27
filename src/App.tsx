@@ -94,7 +94,7 @@ function App() {
         direction="horizontal"
         className="max-h-screen min-h-screen border-0 min-w-screen"
       >
-        <ResizablePanel defaultSize={50}>
+        <ResizablePanel defaultSize={50} minSize={20}>
           <div className="flex h-full items-center justify-center">
             <Card className="w-full h-full border-0 rounded-none gap-2 pt-6 pb-0">
               <CardHeader>
@@ -149,7 +149,7 @@ function App() {
           </div>
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={50}>
+        <ResizablePanel defaultSize={50} minSize={20}>
           <div className="flex flex-col h-full items-center justify-center overflow-hidden">
             <Card
               className={cn(
