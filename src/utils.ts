@@ -9,11 +9,11 @@ export function splitSentences(text: string): string[] {
 }
 
 export async function grammarCorrect(text: string): Promise<string> {
-  return "Grammar corrected sentence.";
+  return text;
 }
 
 export async function naturalVariants(text: string): Promise<string[]> {
-  return ["Natural sentence 1.", "Natural sentence 2."];
+  return [text, text];
 }
 
 export async function polishDraft(text: string): Promise<string> {

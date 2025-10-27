@@ -168,23 +168,28 @@ function App() {
                     {sentences.map((sentence, idx) => (
                       <div
                         key={idx}
-                        className="border-b border-slate-100 rounded-2xl p-3 bg-white"
+                        className="border border-slate-100 rounded-2xl p-3"
                       >
                         <div className="text-sm mb-2">"{sentence}"</div>
                         <div className="text-sm font-medium mb-1">
                           Grammar corrected
                         </div>
-                        <div className="text-xs text-slate-600 mb-1">
+                        <div className="text-sm text-slate-600 mb-1">
                           {suggestions[idx]?.corrected}
                         </div>
                         <div className="text-sm font-medium mb-1">
                           More natural
                         </div>
-                        {suggestions[idx]?.variants.map((v, vi) => (
-                          <div key={vi} className="text-xs text-slate-600 mb-1">
-                            {v}
-                          </div>
-                        ))}
+                        <ul className="list-disc list-inside">
+                          {suggestions[idx]?.variants.map((v, vi) => (
+                            <li
+                              key={vi}
+                              className="text-sm text-slate-600 mb-1"
+                            >
+                              {v}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ))}
                   </div>
