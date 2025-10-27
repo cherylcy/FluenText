@@ -8,11 +8,11 @@ export function splitSentences(text: string): string[] {
   return parts;
 }
 
-export function grammarCorrect(text: string): string {
+export async function grammarCorrect(text: string): Promise<string> {
   return "Grammar corrected sentence.";
 }
 
-export function naturalVariants(text: string): string[] {
+export async function naturalVariants(text: string): Promise<string[]> {
   return ["Natural sentence 1.", "Natural sentence 2."];
 }
 

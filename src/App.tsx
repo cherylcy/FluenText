@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   splitSentences,
   grammarCorrect,
@@ -42,15 +42,36 @@ function App() {
   const [isPolishing, setIsPolishing] = useState<boolean>(false);
   const [showPolished, setShowPolished] = useState<boolean>(false);
   const [polishedText, setPolishedText] = useState<string>("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
 
-  const suggestions: Suggestion[] = useMemo(() => {
-    return sentences.map((s) => {
-      const corrected = grammarCorrect(s);
-      const variants = naturalVariants(s);
-      return { corrected, variants };
-    });
+  useEffect(() => {
+    console.log(sentences);
+    let isMounted = true;
+    const fetchSuggestions = async () => {
+      if (sentences.length === 0) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        const resultsPromises = sentences.map(async (s) => {
+          const corrected = await grammarCorrect(s);
+          const variants = await naturalVariants(s);
+          return { corrected, variants };
+        });
+        const newSuggestions = await Promise.all(resultsPromises);
+        if (isMounted) {
+          setSuggestions(newSuggestions);
+        }
+      } catch (e) {
+        console.error("Generating suggestions failed:", e);
+      }
+    };
+    fetchSuggestions();
+    return () => {
+      isMounted = false;
+    };
   }, [sentences]);
 
   function handlePolish() {
@@ -144,22 +165,22 @@ function App() {
               <CardContent className="overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="space-y-2">
-                    {sentences.map((s, idx) => (
+                    {sentences.map((sentence, idx) => (
                       <div
                         key={idx}
                         className="border-b border-slate-100 rounded-2xl p-3 bg-white"
                       >
-                        <div className="text-sm mb-2">"{s}"</div>
+                        <div className="text-sm mb-2">"{sentence}"</div>
                         <div className="text-sm font-medium mb-1">
                           Grammar corrected
                         </div>
                         <div className="text-xs text-slate-600 mb-1">
-                          {suggestions[idx].corrected}
+                          {suggestions[idx]?.corrected}
                         </div>
                         <div className="text-sm font-medium mb-1">
                           More natural
                         </div>
-                        {suggestions[idx].variants.map((v, vi) => (
+                        {suggestions[idx]?.variants.map((v, vi) => (
                           <div key={vi} className="text-xs text-slate-600 mb-1">
                             {v}
                           </div>
