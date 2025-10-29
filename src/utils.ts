@@ -70,6 +70,13 @@ export class AIEngine {
               Output: You must return a JSON string and make sure your response only contains the JSON string without coding block markdown notation. Example: {"rewrite": [sentence1, ...]}`,
           },
         ],
+        expectedInputs: [
+          {
+            type: "text",
+            languages: ["en"],
+          },
+        ],
+        expectedOutputs: [{ type: "text", languages: ["en"] }],
       });
       modelAvailable = true;
 
@@ -85,6 +92,13 @@ export class AIEngine {
               Output: The polished draft.`,
           },
         ],
+        expectedInputs: [
+          {
+            type: "text",
+            languages: ["en"],
+          },
+        ],
+        expectedOutputs: [{ type: "text", languages: ["en"] }],
       });
       rewriterAvailable = true;
     }
