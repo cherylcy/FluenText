@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { splitSentences, AIEngine } from "./utils";
+import type { Suggestion } from "./utils";
 import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
@@ -25,12 +26,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, Wand2, Loader2, X, RotateCcw } from "lucide-react";
 import "./App.css";
-
-interface Suggestion {
-  sentence: string;
-  corrected: string;
-  variants: string[];
-}
 
 function App() {
   const [draft, setDraft] = useState<string>("");
@@ -64,16 +59,10 @@ function App() {
     }
     setIsSuggesting(true);
     try {
-      const resultsPromises = sentences.map(async (s) => {
-        const corrected = engine.proofreaderAvailable
-          ? await engine.grammarCorrect(s)
-          : "";
-        const variants = engine.modelAvailable
-          ? await engine.naturalVariants(s, selectedTone)
-          : [];
-        return { sentence: s, corrected, variants };
-      });
-      const newSuggestions = await Promise.all(resultsPromises);
+      const newSuggestions = await engine.getSuggestions(
+        sentences,
+        selectedTone
+      );
       setSuggestions(newSuggestions);
       console.log(newSuggestions);
     } catch (e) {
@@ -222,12 +211,20 @@ function App() {
                             <div className="text-sm mb-2">
                               "{suggestion.sentence}"
                             </div>
-                            <div className="text-sm font-medium mb-1">
-                              Grammar corrected
-                            </div>
-                            <div className="text-sm text-slate-600 mb-1">
-                              {suggestions[idx]?.corrected}
-                            </div>
+                            {suggestions[idx]?.corrected ? (
+                              <>
+                                <div className="text-sm font-medium mb-1">
+                                  Grammar corrected
+                                </div>
+                                <div className="text-sm text-slate-600 mb-1">
+                                  {suggestions[idx]?.corrected}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-sm text-slate-600 mb-1">
+                                ✅ No grammar mistakes
+                              </div>
+                            )}
                             <div className="text-sm font-medium mb-1">
                               More natural
                             </div>

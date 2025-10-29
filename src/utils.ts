@@ -1,6 +1,12 @@
 import type { ProofreaderInstance } from "./proofreader";
 import type { LanguageModelInstance } from "./language-model";
 
+export interface Suggestion {
+  sentence: string;
+  corrected: string;
+  variants: string[];
+}
+
 export function splitSentences(text: string): string[] {
   const parts = text
     .replace(/\n+/g, " ")
@@ -12,7 +18,7 @@ export function splitSentences(text: string): string[] {
 }
 
 export class AIEngine {
-  private proofreader: ProofreaderInstance | null;
+  private proofreader: LanguageModelInstance | null;
   public proofreaderAvailable: boolean;
   private model: LanguageModelInstance | null;
   public modelAvailable: boolean;
@@ -20,7 +26,7 @@ export class AIEngine {
   public rewriterAvailable: boolean;
 
   private constructor(
-    proofreader: ProofreaderInstance | null,
+    proofreader: LanguageModelInstance | null,
     proofreaderAvailable: boolean,
     model: LanguageModelInstance | null,
     modelAvailable: boolean,
@@ -41,42 +47,42 @@ export class AIEngine {
       return new AIEngine(null, false, null, false, null, false);
     }
 
-    let proofreaderInstance: ProofreaderInstance | null = null;
+    let proofreaderInstance: LanguageModelInstance | null = null;
     let proofreaderAvailable = false;
-    let status = await Proofreader.availability();
-    if (status === "available" || status === "downloadable") {
-      proofreaderInstance = await Proofreader.create({
-        expectedInputLanguages: ["en"],
-        correctionExplanationLanguage: "en",
-      });
-      proofreaderAvailable = true;
-    }
-
     let modelInstance: LanguageModelInstance | null = null;
     let modelAvailable = false;
     let rewriterInstance: LanguageModelInstance | null = null;
     let rewriterAvailable = false;
-    status = await LanguageModel.availability();
+
+    let status = await LanguageModel.availability();
     if (status === "available" || status === "downloadable") {
+      proofreaderInstance = await LanguageModel.create({
+        initialPrompts: [
+          {
+            role: "system",
+            content: `Act like a function for proofreading sentences.
+              Input: A JSON string representing a list of sentences. Example: ["sentence1", "sentence2", ...]
+              Task: Provide a proofread version for each sentence in the list.
+              Output: A JSON string (without any markdown code block syntax) in the exact same format as the input, where each element is the proofread version of the corresponding original sentence. Example: ["sentence1", "sentence2", ...]`,
+          },
+        ],
+        outputLanguage: "en",
+      });
+      proofreaderAvailable = true;
+
       modelInstance = await LanguageModel.create({
         initialPrompts: [
           {
             role: "system",
             content: `You are an assistant dedicated to improving users' writing.
               Input: You will receive a JSON string containing two keys:
-              - sentence: The original sentence to be revised.
+              - sentences: A list of original sentences to be revised.
               - tone: The desired tone for the rewrite.
-              Task: Provide 1 to 2 versions of the input sentence that are more naturla, idiomatic, and align with the specified tone.
-              Output: You must return a JSON string and make sure your response only contains the JSON string without coding block markdown notation. Example: {"rewrite": [sentence1, ...]}`,
+              Task: Provide 2 to 3 versions of each of the input sentences that are more natural, idiomatic, and align with the specified tone. If the original sentence is good enough, you can leave it empty.
+              Output: A JSON string (without any markdown code block syntax) which is a list of list of rewritten sentences corresponding to the input sentences. Example: [[sentence], [sentence, sentence], []]`,
           },
         ],
-        expectedInputs: [
-          {
-            type: "text",
-            languages: ["en"],
-          },
-        ],
-        expectedOutputs: [{ type: "text", languages: ["en"] }],
+        outputLanguage: "en",
       });
       modelAvailable = true;
 
@@ -92,13 +98,7 @@ export class AIEngine {
               Output: The polished draft.`,
           },
         ],
-        expectedInputs: [
-          {
-            type: "text",
-            languages: ["en"],
-          },
-        ],
-        expectedOutputs: [{ type: "text", languages: ["en"] }],
+        outputLanguage: "en",
       });
       rewriterAvailable = true;
     }
@@ -112,32 +112,84 @@ export class AIEngine {
     );
   }
 
-  public async grammarCorrect(text: string): Promise<string> {
+  public async getSuggestions(
+    sentences: string[],
+    tone: string
+  ): Promise<Suggestion[]> {
     if (!this.proofreaderAvailable) {
       throw Error("Proofreader is not available");
     }
-    const proofreadResult = await this.proofreader?.proofread(text);
-    console.log(proofreadResult);
-    return proofreadResult?.corrections ? proofreadResult?.correctedInput : "";
-  }
-
-  public async naturalVariants(text: string, tone: string): Promise<string[]> {
     if (!this.modelAvailable) {
       throw Error("Model is not available");
     }
-    const response = await this.model?.prompt([
+    console.log(JSON.stringify(sentences));
+    let proofreadResult = await this.proofreader?.prompt([
       {
         role: "user",
-        content: JSON.stringify({ sentence: text, tone }),
+        content: JSON.stringify(sentences),
       },
     ]);
-    if (response === undefined) {
-      return [];
+    console.log(proofreadResult);
+    let correctedSentences;
+    if (proofreadResult) {
+      if (proofreadResult.startsWith("```json"))
+        proofreadResult = proofreadResult.slice(7);
+      if (proofreadResult.endsWith("```"))
+        proofreadResult = proofreadResult.slice(0, -3);
+      correctedSentences = JSON.parse(proofreadResult.trim());
+      if (correctedSentences.length !== sentences.length) {
+        console.log(proofreadResult);
+        console.log(correctedSentences);
+        throw Error(
+          "Grammar corrected sentences do not match original sentences."
+        );
+      }
+    } else {
+      console.log(proofreadResult);
+      throw Error("Failed to generate grammar corrected sentences.");
     }
-    console.log(response);
-    const result = JSON.parse(response);
-    console.log(result);
-    return result.rewrite || [];
+
+    let modelResult = await this.model?.prompt([
+      {
+        role: "user",
+        content: JSON.stringify({ tone, sentences }),
+      },
+    ]);
+    console.log(modelResult);
+    let naturalVariants;
+    if (modelResult) {
+      if (modelResult.startsWith("```json")) {
+        modelResult = modelResult.slice(7);
+      }
+      if (modelResult.endsWith("```")) {
+        modelResult = modelResult.slice(0, -3);
+      }
+      naturalVariants = JSON.parse(modelResult.trim());
+      if (naturalVariants.length !== sentences.length) {
+        console.log(modelResult);
+        console.log(naturalVariants);
+        throw Error("Natural variants do not match original sentences.");
+      }
+    } else {
+      throw Error("Failed to generatl natural variants.");
+    }
+
+    let suggestions: Suggestion[] = [];
+    for (let i = 0; i < sentences.length; i++) {
+      const correct = correctedSentences[i] === sentences[i];
+      if (
+        correctedSentences[i] !== sentences[i] ||
+        naturalVariants[i].length > 0
+      )
+        suggestions.push({
+          sentence: sentences[i],
+          corrected: correct ? "" : correctedSentences[i],
+          variants: naturalVariants[i].filter(
+            (s: string) => s !== correctedSentences[i] && s.length > 0
+          ),
+        });
+    }
+    return suggestions;
   }
 
   public async polishDraft(text: string, tone: string): Promise<string> {
