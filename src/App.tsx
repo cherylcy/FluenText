@@ -1,10 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import {
-  splitSentences,
-  grammarCorrect,
-  naturalVariants,
-  polishDraft,
-} from "./utils";
+import { useState, useMemo } from "react";
+import { splitSentences, AIEngine } from "./utils";
 import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
@@ -28,10 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Wand2, Loader2, X } from "lucide-react";
+import { FileText, Wand2, Loader2, X, RotateCcw } from "lucide-react";
 import "./App.css";
 
 interface Suggestion {
+  sentence: string;
   corrected: string;
   variants: string[];
 }
@@ -43,50 +39,69 @@ function App() {
   const [showPolished, setShowPolished] = useState<boolean>(false);
   const [polishedText, setPolishedText] = useState<string>("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState<boolean>(false);
+  const [engine, setEngine] = useState<AIEngine | null>(null);
+  const [engineInitialized, setEngineInitialized] = useState<boolean>(false);
 
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
 
-  useEffect(() => {
-    console.log(sentences);
-    let isMounted = true;
-    const fetchSuggestions = async () => {
-      if (sentences.length === 0) {
-        setSuggestions([]);
-        return;
-      }
-      try {
-        const resultsPromises = sentences.map(async (s) => {
-          const corrected = await grammarCorrect(s);
-          const variants = await naturalVariants(s);
-          return { corrected, variants };
-        });
-        const newSuggestions = await Promise.all(resultsPromises);
-        if (isMounted) {
-          setSuggestions(newSuggestions);
-        }
-      } catch (e) {
-        console.error("Generating suggestions failed:", e);
-      }
-    };
-    fetchSuggestions();
-    return () => {
-      isMounted = false;
-    };
-  }, [sentences]);
+  const initializeEngine = async () => {
+    if (engineInitialized) return;
 
-  function handlePolish() {
-    setIsPolishing(true);
-    polishDraft(draft)
-      .then((s) => {
-        setPolishedText(s);
-        setIsPolishing(false);
-        setShowPolished(true);
-      })
-      .catch((error) => {
-        console.error("Polishing failed:", error);
-        setIsPolishing(false);
+    const initializedEngine = await AIEngine.createEngine();
+
+    setEngine(initializedEngine);
+    setEngineInitialized(true);
+    if (engineInitialized) {
+      console.log("AI Engine initialized.");
+    }
+  };
+
+  const handleSuggestions = async () => {
+    if (sentences.length === 0 || !engine) {
+      setSuggestions([]);
+      return;
+    }
+    setIsSuggesting(true);
+    try {
+      const resultsPromises = sentences.map(async (s) => {
+        const corrected = engine.proofreaderAvailable
+          ? await engine.grammarCorrect(s)
+          : "";
+        const variants = engine.modelAvailable
+          ? await engine.naturalVariants(s, selectedTone)
+          : [];
+        return { sentence: s, corrected, variants };
       });
-  }
+      const newSuggestions = await Promise.all(resultsPromises);
+      setSuggestions(newSuggestions);
+      console.log(newSuggestions);
+    } catch (e) {
+      console.error("Generating suggestions failed:", e);
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const handlePolish = async () => {
+    setIsPolishing(true);
+    if (engine?.rewriterAvailable) {
+      engine
+        .polishDraft(draft, selectedTone)
+        .then((s) => {
+          setPolishedText(s);
+          setIsPolishing(false);
+          setShowPolished(true);
+        })
+        .catch((error) => {
+          console.error("Polishing failed:", error);
+          setIsPolishing(false);
+        });
+    } else {
+      setIsPolishing(false);
+      console.error("Rewriter is not available.");
+    }
+  };
 
   return (
     <>
@@ -128,7 +143,10 @@ function App() {
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={handlePolish}
+                    onClick={() => {
+                      if (!engineInitialized) initializeEngine();
+                      handlePolish();
+                    }}
                     disabled={!draft.trim() || isPolishing}
                   >
                     {isPolishing ? (
@@ -161,39 +179,67 @@ function App() {
                 <CardTitle className="text-base">
                   Sentence Suggestions
                 </CardTitle>
+                <CardAction>
+                  {!engineInitialized ? (
+                    <Button
+                      onClick={initializeEngine}
+                      disabled={!draft.trim() || isSuggesting}
+                    >
+                      Get suggestions
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleSuggestions}
+                      disabled={!draft.trim() || isSuggesting}
+                    >
+                      <RotateCcw className="h-4 w-4" /> Refresh
+                    </Button>
+                  )}
+                </CardAction>
               </CardHeader>
               <CardContent className="overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="space-y-2">
-                    {sentences.map((sentence, idx) => (
-                      <div
-                        key={idx}
-                        className="border border-slate-100 rounded-2xl p-3"
-                      >
-                        <div className="text-sm mb-2">"{sentence}"</div>
-                        <div className="text-sm font-medium mb-1">
-                          Grammar corrected
-                        </div>
-                        <div className="text-sm text-slate-600 mb-1">
-                          {suggestions[idx]?.corrected}
-                        </div>
-                        <div className="text-sm font-medium mb-1">
-                          More natural
-                        </div>
-                        <ul className="list-disc list-inside">
-                          {suggestions[idx]?.variants.map((v, vi) => (
-                            <li
-                              key={vi}
-                              className="text-sm text-slate-600 mb-1"
-                            >
-                              {v}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+                {engineInitialized && (
+                  <ScrollArea className="h-full">
+                    <div className="space-y-2">
+                      {suggestions
+                        .filter((suggestion) => {
+                          return (
+                            suggestion.corrected !== "" ||
+                            suggestion.variants.length !== 0
+                          );
+                        })
+                        .map((suggestion, idx) => (
+                          <div
+                            key={idx}
+                            className="border border-slate-100 rounded-2xl p-3"
+                          >
+                            <div className="text-sm mb-2">
+                              "{suggestion.sentence}"
+                            </div>
+                            <div className="text-sm font-medium mb-1">
+                              Grammar corrected
+                            </div>
+                            <div className="text-sm text-slate-600 mb-1">
+                              {suggestions[idx]?.corrected}
+                            </div>
+                            <div className="text-sm font-medium mb-1">
+                              More natural
+                            </div>
+                            <ul className="list-disc list-inside">
+                              {suggestions[idx]?.variants.map((v, vi) => (
+                                <li
+                                  key={vi}
+                                  className="text-sm text-slate-600 mb-1"
+                                >
+                                  {v}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
             {showPolished && (
