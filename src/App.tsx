@@ -180,16 +180,22 @@ function App() {
                   Sentence Suggestions
                 </CardTitle>
                 <CardAction>
-                  {!engineInitialized ? (
+                  {suggestions.length === 0 ? (
                     <Button
-                      onClick={initializeEngine}
+                      onClick={() => {
+                        if (!engineInitialized) initializeEngine();
+                        handleSuggestions();
+                      }}
                       disabled={!draft.trim() || isSuggesting}
                     >
                       Get suggestions
                     </Button>
                   ) : (
                     <Button
-                      onClick={handleSuggestions}
+                      onClick={() => {
+                        if (!engineInitialized) initializeEngine();
+                        handleSuggestions();
+                      }}
                       disabled={!draft.trim() || isSuggesting}
                     >
                       <RotateCcw className="h-4 w-4" /> Refresh
