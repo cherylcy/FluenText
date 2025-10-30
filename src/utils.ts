@@ -122,56 +122,78 @@ export class AIEngine {
     if (!this.modelAvailable) {
       throw Error("Model is not available");
     }
-    console.log(JSON.stringify(sentences));
-    let proofreadResult = await this.proofreader?.prompt([
-      {
-        role: "user",
-        content: JSON.stringify(sentences),
-      },
-    ]);
-    console.log(proofreadResult);
-    let correctedSentences;
-    if (proofreadResult) {
-      if (proofreadResult.startsWith("```json"))
-        proofreadResult = proofreadResult.slice(7);
-      if (proofreadResult.endsWith("```"))
-        proofreadResult = proofreadResult.slice(0, -3);
-      correctedSentences = JSON.parse(proofreadResult.trim());
-      if (correctedSentences.length !== sentences.length) {
-        console.log(proofreadResult);
-        console.log(correctedSentences);
-        throw Error(
-          "Grammar corrected sentences do not match original sentences."
-        );
+
+    const batch = 10;
+
+    let correctedSentences = [];
+    for (let i = 0; i < sentences.length; i += batch) {
+      let retry = 0;
+      while (true) {
+        let response = await this.proofreader?.prompt([
+          {
+            role: "user",
+            content: JSON.stringify(sentences.slice(i, i + batch)),
+          },
+        ]);
+        if (response) {
+          if (response.startsWith("```json")) response = response.slice(7);
+          if (response.endsWith("```")) response = response.slice(0, -3);
+          try {
+            const result = JSON.parse(response.trim());
+            if (result.length == sentences.slice(i, i + batch).length) {
+              correctedSentences.push(...result);
+            }
+            break;
+          } catch (e) {
+            if (!(e instanceof SyntaxError)) {
+              console.log(e);
+              throw Error("Failed to generate grammar corrected sentences.");
+            }
+          }
+        }
+        retry++;
+        if (retry > 5)
+          throw Error(
+            "Failed to generate grammar corrected sentences. Maximum retries reached."
+          );
       }
-    } else {
-      console.log(proofreadResult);
-      throw Error("Failed to generate grammar corrected sentences.");
     }
 
-    let modelResult = await this.model?.prompt([
-      {
-        role: "user",
-        content: JSON.stringify({ tone, sentences }),
-      },
-    ]);
-    console.log(modelResult);
-    let naturalVariants;
-    if (modelResult) {
-      if (modelResult.startsWith("```json")) {
-        modelResult = modelResult.slice(7);
+    let naturalVariants = [];
+    for (let i = 0; i < sentences.length; i += batch) {
+      let retry = 0;
+      while (true) {
+        let response = await this.model?.prompt([
+          {
+            role: "user",
+            content: JSON.stringify({
+              tone,
+              sentences: sentences.slice(i, i + batch),
+            }),
+          },
+        ]);
+        if (response) {
+          if (response.startsWith("```json")) response = response.slice(7);
+          if (response.endsWith("```")) response = response.slice(0, -3);
+          try {
+            const result = JSON.parse(response.trim());
+            if (result.length == sentences.slice(i, i + batch).length) {
+              naturalVariants.push(...result);
+            }
+            break;
+          } catch (e) {
+            if (!(e instanceof SyntaxError)) {
+              console.log(e);
+              throw Error("Failed to generate natural variants.");
+            }
+          }
+        }
+        retry++;
+        if (retry > 5)
+          throw Error(
+            "Failed to generate natural variants. Maximum retries reached."
+          );
       }
-      if (modelResult.endsWith("```")) {
-        modelResult = modelResult.slice(0, -3);
-      }
-      naturalVariants = JSON.parse(modelResult.trim());
-      if (naturalVariants.length !== sentences.length) {
-        console.log(modelResult);
-        console.log(naturalVariants);
-        throw Error("Natural variants do not match original sentences.");
-      }
-    } else {
-      throw Error("Failed to generatl natural variants.");
     }
 
     let suggestions: Suggestion[] = [];
@@ -189,6 +211,7 @@ export class AIEngine {
           ),
         });
     }
+    console.log(suggestions);
     return suggestions;
   }
 
