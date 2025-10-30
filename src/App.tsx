@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { splitSentences, AIEngine } from "./utils";
 import type { Suggestion } from "./utils";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import type { ImperativePanelHandle } from "react-resizable-panels";
 import {
   Card,
   CardContent,
@@ -37,7 +38,6 @@ function App() {
   const [isSuggesting, setIsSuggesting] = useState<boolean>(false);
   const [engine, setEngine] = useState<AIEngine | null>(null);
   const [engineInitialized, setEngineInitialized] = useState<boolean>(false);
-
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
 
   const initializeEngine = async () => {
@@ -103,6 +103,15 @@ function App() {
     }
   };
 
+  const polishedDraftPanelRef = useRef<ImperativePanelHandle | null>(null);
+
+  useEffect(() => {
+    if (polishedDraftPanelRef.current) {
+      if (showPolished) polishedDraftPanelRef.current.expand();
+      else polishedDraftPanelRef.current.collapse();
+    }
+  }, [showPolished]);
+
   return (
     <>
       <ResizablePanelGroup
@@ -167,144 +176,157 @@ function App() {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={50} minSize={20}>
-          <div className="flex flex-col h-full items-center justify-center overflow-hidden">
-            <Card
-              className={cn(
-                "w-full border-0 rounded-none gap-2 pt-6 pb-0",
-                showPolished ? "h-1/2" : "h-full"
-              )}
+          <ResizablePanelGroup
+            direction="vertical"
+            className="max-h-screen min-h-screen border-0 w-full"
+          >
+            <ResizablePanel defaultSize={50} minSize={20}>
+              <div className="flex h-full items-center justify-center">
+                <Card className="w-full border-0 rounded-none gap-2 pt-6 pb-0 h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      Sentence Suggestions
+                    </CardTitle>
+                    <CardAction>
+                      {suggestions.length === 0 ? (
+                        <Button
+                          onClick={() => {
+                            if (!engineInitialized) initializeEngine();
+                            handleSuggestions();
+                          }}
+                          disabled={!draft.trim() || isSuggesting}
+                        >
+                          {isSuggesting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>Get suggestions</>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            if (!engineInitialized) initializeEngine();
+                            handleSuggestions();
+                          }}
+                          disabled={!draft.trim() || isSuggesting}
+                        >
+                          {isSuggesting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="h-4 w-4" /> Refresh
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </CardAction>
+                  </CardHeader>
+                  <CardContent className="overflow-hidden">
+                    {engineInitialized && (
+                      <ScrollArea className="h-full">
+                        <div className="space-y-2 mr-2">
+                          {suggestions
+                            .filter((suggestion) => {
+                              return (
+                                suggestion.corrected !== "" ||
+                                suggestion.variants.length !== 0
+                              );
+                            })
+                            .map((suggestion, idx) => (
+                              <div
+                                key={idx}
+                                className="border border-slate-100 rounded-2xl p-3"
+                              >
+                                <div className="text-sm mb-2">
+                                  "{suggestion.sentence}"
+                                </div>
+                                {suggestions[idx]?.corrected && (
+                                  <>
+                                    <div className="text-sm font-medium mb-1">
+                                      Grammar corrected
+                                    </div>
+                                    <div className="text-sm text-slate-600 mb-1">
+                                      {suggestions[idx]?.corrected}
+                                    </div>
+                                  </>
+                                )}
+                                {suggestions[idx]?.variants.length > 0 && (
+                                  <>
+                                    <div className="text-sm font-medium mb-1">
+                                      More natural
+                                    </div>
+                                    <ul className="list-disc list-inside">
+                                      {suggestions[idx]?.variants.map(
+                                        (v, vi) => (
+                                          <li
+                                            key={vi}
+                                            className="text-sm text-slate-600 mb-1"
+                                          >
+                                            {v}
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel
+              defaultSize={50}
+              minSize={20}
+              collapsible
+              collapsedSize={0}
+              ref={polishedDraftPanelRef}
             >
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Sentence Suggestions
-                </CardTitle>
-                <CardAction>
-                  {suggestions.length === 0 ? (
-                    <Button
-                      onClick={() => {
-                        if (!engineInitialized) initializeEngine();
-                        handleSuggestions();
-                      }}
-                      disabled={!draft.trim() || isSuggesting}
-                    >
-                      {isSuggesting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        <>Get suggestions</>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        if (!engineInitialized) initializeEngine();
-                        handleSuggestions();
-                      }}
-                      disabled={!draft.trim() || isSuggesting}
-                    >
-                      {isSuggesting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <RotateCcw className="h-4 w-4" /> Refresh
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </CardAction>
-              </CardHeader>
-              <CardContent className="overflow-hidden">
-                {engineInitialized && (
-                  <ScrollArea className="h-full">
-                    <div className="space-y-2 mr-2">
-                      {suggestions
-                        .filter((suggestion) => {
-                          return (
-                            suggestion.corrected !== "" ||
-                            suggestion.variants.length !== 0
-                          );
-                        })
-                        .map((suggestion, idx) => (
-                          <div
-                            key={idx}
-                            className="border border-slate-100 rounded-2xl p-3"
-                          >
-                            <div className="text-sm mb-2">
-                              "{suggestion.sentence}"
-                            </div>
-                            {suggestions[idx]?.corrected && (
-                              <>
-                                <div className="text-sm font-medium mb-1">
-                                  Grammar corrected
-                                </div>
-                                <div className="text-sm text-slate-600 mb-1">
-                                  {suggestions[idx]?.corrected}
-                                </div>
-                              </>
-                            )}
-                            {suggestions[idx]?.variants.length > 0 && (
-                              <>
-                                <div className="text-sm font-medium mb-1">
-                                  More natural
-                                </div>
-                                <ul className="list-disc list-inside">
-                                  {suggestions[idx]?.variants.map((v, vi) => (
-                                    <li
-                                      key={vi}
-                                      className="text-sm text-slate-600 mb-1"
-                                    >
-                                      {v}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </>
-                            )}
-                          </div>
-                        ))}
+              <div className="flex h-full items-center justify-center">
+                <Card className="w-full h-full border-0 rounded-none gap-1 pt-6 pb-0">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Wand2 className="h-4 w-4" /> Polished Draft
+                    </CardTitle>
+                    <CardAction>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPolished(false)}
+                        className="h-4 w-4 text-muted-foreground hover:text-foreground hover:bg-transparent"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardAction>
+                  </CardHeader>
+                  <CardContent className="h-full flex flex-col justify-between">
+                    <div className="mb-2 text-xs text-slate-500">
+                      Tone: {selectedTone}
                     </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-            {showPolished && (
-              <Card className="w-full h-1/2 border-0 rounded-none gap-1 pt-6 pb-0">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Wand2 className="h-4 w-4" /> Polished Draft
-                  </CardTitle>
-                  <CardAction>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPolished(false)}
-                      className="h-4 w-4 text-muted-foreground hover:text-foreground hover:bg-transparent"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </CardAction>
-                </CardHeader>
-                <CardContent className="h-full flex flex-col justify-between">
-                  <div className="mb-2 text-xs text-slate-500">
-                    Tone: {selectedTone}
-                  </div>
-                  <div className="grow h-0">
-                    <ScrollArea className="h-full">
-                      <Textarea
-                        value={polishedText}
-                        readOnly
-                        className="border-none shadow-none resize-none focus-visible:ring-0"
-                      />
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                    <div className="grow h-0">
+                      <ScrollArea className="h-full">
+                        <Textarea
+                          value={polishedText}
+                          readOnly
+                          className="border-none shadow-none resize-none focus-visible:ring-0"
+                        />
+                      </ScrollArea>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
     </>
