@@ -147,16 +147,20 @@ export class AIEngine {
             break;
           } catch (e) {
             if (!(e instanceof SyntaxError)) {
-              console.log(e);
-              throw Error("Failed to generate grammar corrected sentences.");
+              console.error(
+                "Failed to generate grammar corrected sentences.",
+                e
+              );
             }
           }
         }
         retry++;
-        if (retry > 5)
-          throw Error(
+        if (retry > 5) {
+          console.error(
             "Failed to generate grammar corrected sentences. Maximum retries reached."
           );
+          correctedSentences.push(Array(batch).fill(""));
+        }
       }
     }
 
@@ -184,16 +188,17 @@ export class AIEngine {
             break;
           } catch (e) {
             if (!(e instanceof SyntaxError)) {
-              console.log(e);
-              throw Error("Failed to generate natural variants.");
+              console.error("Failed to generate natural variants.", e);
             }
           }
         }
         retry++;
-        if (retry > 5)
-          throw Error(
+        if (retry > 5) {
+          console.error(
             "Failed to generate natural variants. Maximum retries reached."
           );
+          naturalVariants.push(Array(batch).fill([]));
+        }
       }
     }
 
@@ -212,21 +217,25 @@ export class AIEngine {
           ),
         });
     }
-    console.log(suggestions);
     return suggestions;
   }
 
   public async polishDraft(text: string, tone: string): Promise<string> {
     if (!this.rewriterAvailable) {
-      throw Error("Rewriter is not available");
+      console.error("Rewriter is not available");
+      return "AI API is not available :(";
     }
     const response = await this.rewriter?.prompt([
       { role: "user", content: JSON.stringify({ draft: text, tone }) },
     ]);
-    if (response === undefined) {
-      return "";
-    }
     console.log(response);
-    return response || "";
+    return response || "Something went wrong. Please try again :)";
   }
+}
+
+let engine: AIEngine;
+
+export async function getEngine() {
+  if (!engine) engine = await AIEngine.createEngine();
+  return engine;
 }
