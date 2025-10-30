@@ -208,7 +208,7 @@ function App() {
                   </CardHeader>
                   <CardContent className="overflow-hidden">
                     <ScrollArea className="h-full">
-                      <div className="space-y-2 mr-2">
+                      <div className="space-y-2 mr-2 py-2">
                         {suggestions
                           .filter((suggestion) => {
                             return (
