@@ -58,18 +58,29 @@ function App() {
       return;
     }
     setIsSuggesting(true);
-    try {
-      const newSuggestions = await engine.getSuggestions(
-        sentences,
-        selectedTone
-      );
-      setSuggestions(newSuggestions);
-      console.log(newSuggestions);
-    } catch (e) {
-      console.error("Generating suggestions failed:", e);
-    } finally {
-      setIsSuggesting(false);
-    }
+    let success = false;
+    let retry = 0;
+    do {
+      try {
+        const newSuggestions = await engine.getSuggestions(
+          sentences,
+          selectedTone
+        );
+        setSuggestions(newSuggestions);
+        console.log(newSuggestions);
+        success = true;
+      } catch (e) {
+        console.error("Generating suggestions failed:", e);
+      } finally {
+        setIsSuggesting(false);
+      }
+      retry++;
+      if (retry > 5 && !success) {
+        console.error(
+          "Generating suggestions failed. Maximum retries reached."
+        );
+      }
+    } while (!success && retry <= 5);
   };
 
   const handlePolish = async () => {
