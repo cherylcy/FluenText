@@ -95,13 +95,14 @@ export class AIEngine {
               - draft: The original draft to be revised.
               - tone: The desired tone for the polish.
               Task: Polish the draft with the specified tone.
-              Output: The polished draft.`,
+              Output: The polished draft, plain-text.`,
           },
         ],
         outputLanguage: "en",
       });
       rewriterAvailable = true;
     }
+
     return new AIEngine(
       proofreaderInstance,
       proofreaderAvailable,
