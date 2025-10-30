@@ -140,7 +140,7 @@ function App() {
                   >
                     {isPolishing ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spoin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Polishing...
                       </>
                     ) : (
@@ -177,7 +177,14 @@ function App() {
                       }}
                       disabled={!draft.trim() || isSuggesting}
                     >
-                      Get suggestions
+                      {isSuggesting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>Get suggestions</>
+                      )}
                     </Button>
                   ) : (
                     <Button
@@ -187,7 +194,16 @@ function App() {
                       }}
                       disabled={!draft.trim() || isSuggesting}
                     >
-                      <RotateCcw className="h-4 w-4" /> Refresh
+                      {isSuggesting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <RotateCcw className="h-4 w-4" /> Refresh
+                        </>
+                      )}
                     </Button>
                   )}
                 </CardAction>
@@ -195,7 +211,7 @@ function App() {
               <CardContent className="overflow-hidden">
                 {engineInitialized && (
                   <ScrollArea className="h-full">
-                    <div className="space-y-2">
+                    <div className="space-y-2 mr-2">
                       {suggestions
                         .filter((suggestion) => {
                           return (
@@ -211,7 +227,7 @@ function App() {
                             <div className="text-sm mb-2">
                               "{suggestion.sentence}"
                             </div>
-                            {suggestions[idx]?.corrected ? (
+                            {suggestions[idx]?.corrected && (
                               <>
                                 <div className="text-sm font-medium mb-1">
                                   Grammar corrected
@@ -220,24 +236,24 @@ function App() {
                                   {suggestions[idx]?.corrected}
                                 </div>
                               </>
-                            ) : (
-                              <div className="text-sm text-slate-600 mb-1">
-                                ✅ No grammar mistakes
-                              </div>
                             )}
-                            <div className="text-sm font-medium mb-1">
-                              More natural
-                            </div>
-                            <ul className="list-disc list-inside">
-                              {suggestions[idx]?.variants.map((v, vi) => (
-                                <li
-                                  key={vi}
-                                  className="text-sm text-slate-600 mb-1"
-                                >
-                                  {v}
-                                </li>
-                              ))}
-                            </ul>
+                            {suggestions[idx]?.variants.length > 0 && (
+                              <>
+                                <div className="text-sm font-medium mb-1">
+                                  More natural
+                                </div>
+                                <ul className="list-disc list-inside">
+                                  {suggestions[idx]?.variants.map((v, vi) => (
+                                    <li
+                                      key={vi}
+                                      className="text-sm text-slate-600 mb-1"
+                                    >
+                                      {v}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
                           </div>
                         ))}
                     </div>
