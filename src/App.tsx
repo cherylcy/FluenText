@@ -151,13 +151,12 @@ function App() {
                   >
                     {isPolishing ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />{" "}
                         Polishing...
                       </>
                     ) : (
                       <>
-                        <Wand2 className="h-4 w-4 mr-2" />
-                        Generate polished draft
+                        <Wand2 className="h-4 w-4" /> Generate polished draft
                       </>
                     )}
                   </Button>
@@ -190,7 +189,7 @@ function App() {
                     >
                       {isSuggesting ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           Loading...
                         </>
                       ) : (
@@ -207,7 +206,7 @@ function App() {
                     >
                       {isSuggesting ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           Loading...
                         </>
                       ) : (
