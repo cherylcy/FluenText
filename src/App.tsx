@@ -120,7 +120,7 @@ function App() {
               </CardHeader>
               <CardContent className="h-full flex flex-col justify-between overflow-hidden p-0">
                 <Textarea
-                  placeholder="Start writing here… (Get suggestions on the right)"
+                  placeholder="Start writing here…"
                   className="text-base h-full resize-none overflow-y-auto border-0 px-8 focus-visible:ring-0 shadow-none"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -211,10 +211,16 @@ function App() {
                     </CardAction>
                   </CardHeader>
                   <CardContent className="overflow-hidden">
-                    {isSuggestionError ? (
-                      <div className="text-sm mb-2">
-                        Something went wrong. Please try again.
-                      </div>
+                    {suggestions.length === 0 ? (
+                      isSuggestionError ? (
+                        <div className="text-sm text-slate-500 mb-2">
+                          Something went wrong. Please try again.
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-500 mb-2">
+                          No suggestions for you right now...
+                        </div>
+                      )
                     ) : (
                       <ScrollArea className="h-full">
                         <div className="space-y-2 mr-2 py-2">
