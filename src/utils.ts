@@ -213,7 +213,8 @@ export class AIEngine {
           sentence: sentences[i],
           corrected: correct ? "" : correctedSentences[i],
           variants: naturalVariants[i].filter(
-            (s: string) => s !== correctedSentences[i] && s.length > 0
+            (s: string) =>
+              s !== correctedSentences[i] && s.length > 0 && s != sentences[i]
           ),
         });
     }
