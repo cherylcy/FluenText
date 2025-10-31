@@ -35,6 +35,7 @@ function App() {
   const [polishedText, setPolishedText] = useState<string>("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isSuggesting, setIsSuggesting] = useState<boolean>(false);
+  const [isSuggestionError, setIsSuggestionError] = useState<boolean>(false);
 
   const sentences: string[] = useMemo(() => splitSentences(draft), [draft]);
 
@@ -57,6 +58,7 @@ function App() {
           setSuggestions((prev) => [...prev, ...batch]);
         }
         success = true;
+        setIsSuggestionError(false);
       } catch (e) {
         console.error("Generating suggestions failed:", e);
         retry++;
@@ -66,9 +68,8 @@ function App() {
       }
     }
     if (!success) {
-      console.error(
-        "Generating suggestions failed. Maximum retries reached."
-      );
+      console.error("Generating suggestions failed. Maximum retries reached.");
+      setIsSuggestionError(true);
     }
     setIsSuggesting(false);
   };
@@ -210,54 +211,62 @@ function App() {
                     </CardAction>
                   </CardHeader>
                   <CardContent className="overflow-hidden">
-                    <ScrollArea className="h-full">
-                      <div className="space-y-2 mr-2 py-2">
-                        {suggestions
-                          .filter((suggestion) => {
-                            return (
-                              suggestion.corrected !== "" ||
-                              suggestion.variants.length !== 0
-                            );
-                          })
-                          .map((suggestion, idx) => (
-                            <div
-                              key={idx}
-                              className="border border-slate-100 rounded-2xl p-3"
-                            >
-                              <div className="text-sm mb-2">
-                                "{suggestion.sentence}"
-                              </div>
-                              {suggestions[idx]?.corrected && (
-                                <>
-                                  <div className="text-sm font-medium mb-1">
-                                    Grammar corrected
-                                  </div>
-                                  <div className="text-sm text-slate-600 mb-1">
-                                    {suggestions[idx]?.corrected}
-                                  </div>
-                                </>
-                              )}
-                              {suggestions[idx]?.variants.length > 0 && (
-                                <>
-                                  <div className="text-sm font-medium mb-1">
-                                    More natural
-                                  </div>
-                                  <ul className="list-disc list-inside">
-                                    {suggestions[idx]?.variants.map((v, vi) => (
-                                      <li
-                                        key={vi}
-                                        className="text-sm text-slate-600 mb-1"
-                                      >
-                                        {v}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </>
-                              )}
-                            </div>
-                          ))}
+                    {isSuggestionError ? (
+                      <div className="text-sm mb-2">
+                        Something went wrong. Please try again.
                       </div>
-                    </ScrollArea>
+                    ) : (
+                      <ScrollArea className="h-full">
+                        <div className="space-y-2 mr-2 py-2">
+                          {suggestions
+                            .filter((suggestion) => {
+                              return (
+                                suggestion.corrected !== "" ||
+                                suggestion.variants.length !== 0
+                              );
+                            })
+                            .map((suggestion, idx) => (
+                              <div
+                                key={idx}
+                                className="border border-slate-100 rounded-2xl p-3"
+                              >
+                                <div className="text-sm mb-2">
+                                  "{suggestion.sentence}"
+                                </div>
+                                {suggestions[idx]?.corrected && (
+                                  <>
+                                    <div className="text-sm font-medium mb-1">
+                                      Grammar corrected
+                                    </div>
+                                    <div className="text-sm text-slate-600 mb-1">
+                                      {suggestions[idx]?.corrected}
+                                    </div>
+                                  </>
+                                )}
+                                {suggestions[idx]?.variants.length > 0 && (
+                                  <>
+                                    <div className="text-sm font-medium mb-1">
+                                      More natural
+                                    </div>
+                                    <ul className="list-disc list-inside">
+                                      {suggestions[idx]?.variants.map(
+                                        (v, vi) => (
+                                          <li
+                                            key={vi}
+                                            className="text-sm text-slate-600 mb-1"
+                                          >
+                                            {v}
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </ScrollArea>
+                    )}
                   </CardContent>
                 </Card>
               </div>
