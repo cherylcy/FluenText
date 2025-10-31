@@ -158,7 +158,8 @@ export class AIEngine {
           console.error(
             "Failed to generate grammar corrected sentences. Maximum retries reached."
           );
-          correctedSentences.push(Array(batch).fill(""));
+          correctedSentences.push(...Array(batch).fill(""));
+          break;
         }
       }
     }
@@ -196,7 +197,8 @@ export class AIEngine {
           console.error(
             "Failed to generate natural variants. Maximum retries reached."
           );
-          naturalVariants.push(Array(batch).fill([]));
+          naturalVariants.push(...Array(batch).fill([]));
+          break;
         }
       }
     }
@@ -228,7 +230,6 @@ export class AIEngine {
     const response = await this.rewriter?.prompt([
       { role: "user", content: JSON.stringify({ draft: text, tone }) },
     ]);
-    console.log(response);
     return response || "Something went wrong. Please try again :)";
   }
 }
