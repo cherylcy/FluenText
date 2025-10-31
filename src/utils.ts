@@ -235,9 +235,19 @@ export class AIEngine {
       console.error("Rewriter is not available");
       return "AI API is not available :(";
     }
-    const response = await this.rewriter?.prompt([
+    let response = await this.rewriter?.prompt([
       { role: "user", content: JSON.stringify({ draft: text, tone }) },
     ]);
+    if (response?.startsWith("```json")) response = response.slice(7);
+    if (response?.endsWith("```")) response = response.slice(0, -3);
+    if (response?.startsWith("{")) {
+      try {
+        const obj = JSON.parse(response);
+        response = obj.draft;
+      } catch (e) {
+        response = "Something went wrong. Please try again :)";
+      }
+    }
     return response || "Something went wrong. Please try again :)";
   }
 }
