@@ -38,6 +38,18 @@ The app is built with [Vite](https://vite.dev/), [React](https://react.dev/), an
 └── package.json             # Scripts and dependencies
 ```
 
+## 🔌 Prompt API integration overview
+
+- **Capability detection.** The helper in `src/utils.ts` checks that
+  `window.ai?.assistant` is present before enabling any AI actions, and surfaces a
+  descriptive error message when the API is unavailable.
+- **On-device prompts.** Sentence-level rewrites call `assistant.prompt()` with the
+  user's selected tone and improvement level so Chrome's on-device models can provide
+  grammar fixes or idiomatic alternatives without leaving the browser.
+- **Draft polishing.** The "Generate polished draft" flow requests a longer-form
+  completion from the same assistant, mapping the streamed response into the polished
+  panel while preserving sentence suggestions.
+
 ## 🚀 Getting started
 
 1. **Install dependencies**
