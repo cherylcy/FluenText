@@ -77,3 +77,11 @@ try FluenText locally:
 - Click **Generate polished draft** to produce a full rewritten draft. The polished panel
   appears below the sentence suggestions and can be closed when you want more space.
 
+## 🎬 Demo
+
+<p align="center">
+  <img src="docs/demo.png" width="700" alt="FluenText UI">
+</p>
+
+## 📄 License
+Distributed under the MIT License. See LICENSE for more information.
