@@ -116,7 +116,7 @@ function App() {
               </CardHeader>
               <CardContent className="h-full flex flex-col justify-between overflow-hidden p-0">
                 <Textarea
-                  placeholder="Start writing here… (Suggestions appear on the right as you type)"
+                  placeholder="Start writing here… (Get suggestions on the right)"
                   className="text-base h-full resize-none overflow-y-auto border-0 px-8 focus-visible:ring-0 shadow-none"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
