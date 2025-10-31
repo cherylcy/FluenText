@@ -112,10 +112,10 @@ export class AIEngine {
     );
   }
 
-  public async getSuggestions(
+  public async *getSuggestions(
     sentences: string[],
     tone: string
-  ): Promise<Suggestion[]> {
+  ): AsyncGenerator<Suggestion[]> {
     if (!this.proofreaderAvailable) {
       throw Error("Proofreader is not available");
     }
@@ -124,102 +124,107 @@ export class AIEngine {
     }
 
     const batch = 10;
-
-    let correctedSentences = [];
     for (let i = 0; i < sentences.length; i += batch) {
-      let retry = 0;
-      while (true) {
-        let response = await this.proofreader?.prompt([
-          {
-            role: "user",
-            content: JSON.stringify(sentences.slice(i, i + batch)),
-          },
-        ]);
-        if (response) {
-          if (response.startsWith("```json")) response = response.slice(7);
-          if (response.endsWith("```")) response = response.slice(0, -3);
-          try {
-            const result = JSON.parse(response.trim());
-            if (result.length == sentences.slice(i, i + batch).length) {
-              correctedSentences.push(...result);
-            }
-            break;
-          } catch (e) {
-            if (!(e instanceof SyntaxError)) {
-              console.error(
-                "Failed to generate grammar corrected sentences.",
-                e
-              );
-            }
-          }
-        }
-        retry++;
-        if (retry > 5) {
-          console.error(
-            "Failed to generate grammar corrected sentences. Maximum retries reached."
-          );
-          correctedSentences.push(...Array(batch).fill(""));
-          break;
+      const currentSentences = sentences.slice(i, i + batch);
+
+      const correctedSentences = await this.getCorrectedBatch(currentSentences);
+      const naturalVariants = await this.getVariantsBatch(
+        currentSentences,
+        tone
+      );
+
+      const batchSuggestions: Suggestion[] = [];
+      for (let j = 0; j < currentSentences.length; j++) {
+        const sentence = currentSentences[j];
+        const correctedSentence = correctedSentences[j];
+        const variants = naturalVariants[j] ?? [];
+        const correct = correctedSentence === sentence;
+        if (correctedSentence !== sentence || variants.length > 0) {
+          batchSuggestions.push({
+            sentence,
+            corrected: correct ? "" : correctedSentence,
+            variants: variants.filter(
+              (s: string) =>
+                s !== correctedSentence && s.length > 0 && s !== sentence
+            ),
+          });
         }
       }
-    }
 
-    let naturalVariants = [];
-    for (let i = 0; i < sentences.length; i += batch) {
-      let retry = 0;
-      while (true) {
-        let response = await this.model?.prompt([
-          {
-            role: "user",
-            content: JSON.stringify({
-              tone,
-              sentences: sentences.slice(i, i + batch),
-            }),
-          },
-        ]);
-        if (response) {
-          if (response.startsWith("```json")) response = response.slice(7);
-          if (response.endsWith("```")) response = response.slice(0, -3);
-          try {
-            const result = JSON.parse(response.trim());
-            if (result.length == sentences.slice(i, i + batch).length) {
-              naturalVariants.push(...result);
-            }
-            break;
-          } catch (e) {
-            if (!(e instanceof SyntaxError)) {
-              console.error("Failed to generate natural variants.", e);
-            }
-          }
-        }
-        retry++;
-        if (retry > 5) {
-          console.error(
-            "Failed to generate natural variants. Maximum retries reached."
-          );
-          naturalVariants.push(...Array(batch).fill([]));
-          break;
-        }
+      if (batchSuggestions.length > 0) {
+        yield batchSuggestions;
       }
     }
+  }
 
-    let suggestions: Suggestion[] = [];
-    for (let i = 0; i < sentences.length; i++) {
-      const correct = correctedSentences[i] === sentences[i];
-      if (
-        correctedSentences[i] !== sentences[i] ||
-        naturalVariants[i].length > 0
-      )
-        suggestions.push({
-          sentence: sentences[i],
-          corrected: correct ? "" : correctedSentences[i],
-          variants: naturalVariants[i].filter(
-            (s: string) =>
-              s !== correctedSentences[i] && s.length > 0 && s != sentences[i]
-          ),
-        });
+  private async getCorrectedBatch(sentences: string[]): Promise<string[]> {
+    let retry = 0;
+    const fallback = Array(sentences.length).fill("");
+    while (retry <= 5) {
+      let response = await this.proofreader?.prompt([
+        {
+          role: "user",
+          content: JSON.stringify(sentences),
+        },
+      ]);
+      if (response) {
+        if (response.startsWith("```json")) response = response.slice(7);
+        if (response.endsWith("```")) response = response.slice(0, -3);
+        try {
+          const result = JSON.parse(response.trim());
+          if (result.length === sentences.length) {
+            return result;
+          }
+        } catch (e) {
+          if (!(e instanceof SyntaxError)) {
+            console.error("Failed to generate grammar corrected sentences.", e);
+          }
+        }
+      }
+      retry++;
     }
-    return suggestions;
+    console.error(
+      "Failed to generate grammar corrected sentences. Maximum retries reached."
+    );
+    return fallback;
+  }
+
+  private async getVariantsBatch(
+    sentences: string[],
+    tone: string
+  ): Promise<string[][]> {
+    let retry = 0;
+    const fallback = Array.from({ length: sentences.length }, () => [] as string[]);
+    while (retry <= 5) {
+      let response = await this.model?.prompt([
+        {
+          role: "user",
+          content: JSON.stringify({
+            tone,
+            sentences,
+          }),
+        },
+      ]);
+      if (response) {
+        if (response.startsWith("```json")) response = response.slice(7);
+        if (response.endsWith("```")) response = response.slice(0, -3);
+        try {
+          const result = JSON.parse(response.trim());
+          if (result.length === sentences.length) {
+            return result;
+          }
+        } catch (e) {
+          if (!(e instanceof SyntaxError)) {
+            console.error("Failed to generate natural variants.", e);
+          }
+        }
+      }
+      retry++;
+    }
+    console.error(
+      "Failed to generate natural variants. Maximum retries reached."
+    );
+    return fallback;
   }
 
   public async polishDraft(text: string, tone: string): Promise<string> {

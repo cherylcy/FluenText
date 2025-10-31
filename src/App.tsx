@@ -43,30 +43,34 @@ function App() {
       setSuggestions([]);
       return;
     }
+    setSuggestions([]);
     setIsSuggesting(true);
-    let engine = await getEngine();
+    const engine = await getEngine();
     let success = false;
     let retry = 0;
-    do {
+    while (!success && retry <= 5) {
       try {
-        const newSuggestions = await engine.getSuggestions(
+        for await (const batch of engine.getSuggestions(
           sentences,
           selectedTone
-        );
-        setSuggestions(newSuggestions);
+        )) {
+          setSuggestions((prev) => [...prev, ...batch]);
+        }
         success = true;
       } catch (e) {
         console.error("Generating suggestions failed:", e);
-      } finally {
-        setIsSuggesting(false);
+        retry++;
+        if (retry <= 5) {
+          setSuggestions([]);
+        }
       }
-      retry++;
-      if (retry > 5 && !success) {
-        console.error(
-          "Generating suggestions failed. Maximum retries reached."
-        );
-      }
-    } while (!success && retry <= 5);
+    }
+    if (!success) {
+      console.error(
+        "Generating suggestions failed. Maximum retries reached."
+      );
+    }
+    setIsSuggesting(false);
   };
 
   const handlePolish = async () => {
