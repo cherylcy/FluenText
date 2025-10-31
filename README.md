@@ -38,18 +38,6 @@ The app is built with [Vite](https://vite.dev/), [React](https://react.dev/), an
 └── package.json             # Scripts and dependencies
 ```
 
-## 🔌 Prompt API integration overview
-
-- **Capability detection.** The helper in `src/utils.ts` checks that
-  `window.ai?.assistant` is present before enabling any AI actions, and surfaces a
-  descriptive error message when the API is unavailable.
-- **On-device prompts.** Sentence-level rewrites call `assistant.prompt()` with the
-  user's selected tone and improvement level so Chrome's on-device models can provide
-  grammar fixes or idiomatic alternatives without leaving the browser.
-- **Draft polishing.** The "Generate polished draft" flow requests a longer-form
-  completion from the same assistant, mapping the streamed response into the polished
-  panel while preserving sentence suggestions.
-
 ## 🚀 Getting started
 
 1. **Install dependencies**
@@ -68,6 +56,18 @@ The app is built with [Vite](https://vite.dev/), [React](https://react.dev/), an
 
    Vite prints a local URL (default `http://localhost:5173`). Open it in a compatible
    Chrome build with the Prompt API enabled.
+
+## 🧪 Enabling the Chrome Prompt API
+
+The Prompt API currently ships behind experimental flags in Chrome-based browsers. To
+try FluenText locally:
+
+1. Install the latest [Chrome Canary](https://www.google.com/chrome/canary/) or a
+   Chromium build that exposes the Prompt API.
+2. Navigate to `chrome://flags/#prompt-api-for-gemini-nano` and set it to **Enabled**.
+3. Restart the browser when prompted so the change takes effect.
+4. Visit the app in that browser window and confirm the banner indicates "Prompt API
+   ready" before requesting AI assistance.
 
 ## 💡 Usage tips
 
