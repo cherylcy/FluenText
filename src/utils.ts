@@ -1,4 +1,3 @@
-import type { ProofreaderInstance } from "./proofreader";
 import type { LanguageModelInstance } from "./language-model";
 
 export interface Suggestion {

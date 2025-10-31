@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { splitSentences, getEngine } from "./utils";
 import type { Suggestion } from "./utils";
-import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
   ResizablePanel,
