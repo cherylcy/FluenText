@@ -123,7 +123,7 @@ export class AIEngine {
       throw Error("Model is not available");
     }
 
-    const batch = 10;
+    const batch = 5;
     for (let i = 0; i < sentences.length; i += batch) {
       const currentSentences = sentences.slice(i, i + batch);
 
@@ -194,7 +194,10 @@ export class AIEngine {
     tone: string
   ): Promise<string[][]> {
     let retry = 0;
-    const fallback = Array.from({ length: sentences.length }, () => [] as string[]);
+    const fallback = Array.from(
+      { length: sentences.length },
+      () => [] as string[]
+    );
     while (retry <= 5) {
       let response = await this.model?.prompt([
         {
